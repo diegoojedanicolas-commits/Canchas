@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Potrero — Juega, conecta, compite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --verde-cancha:#1B6E3C;
+    --verde-claro:#3FA34D;
+    --verde-oscuro:#0F4D29;
+    --tiza:#F4F2E9;
+    --tiza-2:#E7E2D2;
+    --carbon:#13201A;
+    --carbon-suave:#4A5950;
+    --amarillo:#FFC72C;
+    --rojo:#C8102E;
+    --oro-1:#FCE38A; --oro-2:#C9970F;
+    --plata-1:#F3F5F6; --plata-2:#94A0A8;
+    --bronce-1:#E0A05C; --bronce-2:#7A4A22;
+    --leyenda-1:#7B2FF7; --leyenda-2:#0EC6C6;
+    --radius:14px;
+    --sombra: 0 2px 10px rgba(19,32,26,0.08);
+    --max-w: 640px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--tiza);
+    color:var(--carbon);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .num, .ovr, .stat-val, .price, .badge-num{font-family:'Space Mono',monospace;}
+  h1,h2,h3,.display{font-family:'Anton',sans-serif; letter-spacing:0.02em; text-transform:uppercase; font-weight:400; margin:0;}
+
+  /* ---------- App shell ---------- */
+  #app{max-width:var(--max-w); margin:0 auto; min-height:100vh; background:var(--tiza); position:relative; display:flex; flex-direction:column;}
+
+  header.topbar{
+    background:var(--carbon);
+    color:var(--tiza);
+    padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:30;
+    border-bottom:3px solid var(--verde-claro);
+  }
+  header.topbar .brand{display:flex; align-items:center; gap:8px;}
+  header.topbar .brand .display{font-size:22px; color:var(--tiza);}
+  header.topbar .brand .display span{color:var(--amarillo);}
+  .ovr-badge{
+    display:flex; align-items:center; gap:6px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:20px; padding:5px 10px 5px 6px;
+    font-size:12px; cursor:pointer;
+  }
+  .ovr-badge .circle{
+    width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700;
+    background:linear-gradient(145deg,var(--oro-1),var(--oro-2)); color:var(--carbon);
+  }
+
+  main{flex:1; padding:16px 16px 90px; }
+  .screen{display:none;}
+  .screen.activo{display:block; animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .eyebrow{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--verde-cancha); font-weight:700; margin-bottom:4px;}
+  .titulo-pantalla{font-size:26px; margin-bottom:2px;}
+  .subt{color:var(--carbon-suave); font-size:14px; margin:0 0 18px;}
+
+  .linea-tiza{border:none; border-top:2px dashed var(--tiza-2); margin:22px 0;}
+
+  /* ---------- Cards generic ---------- */
+  .card{
+    background:#fff; border-radius:var(--radius); padding:16px; box-shadow:var(--sombra);
+    margin-bottom:14px; border:1px solid rgba(19,32,26,0.06);
+  }
+  .card.verde{background:linear-gradient(135deg,var(--verde-cancha),var(--verde-oscuro)); color:var(--tiza);}
+  .card-row{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .card h3{font-size:17px; margin-bottom:2px;}
+  .meta{font-size:12.5px; color:var(--carbon-suave); display:flex; flex-wrap:wrap; gap:10px; margin-top:6px;}
+  .meta span{display:inline-flex; align-items:center; gap:4px;}
+
+  .pill{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:6px 11px; border-radius:20px; font-size:12.5px; font-weight:600;
+    border:1px solid var(--tiza-2); background:var(--tiza); color:var(--carbon);
+    cursor:pointer; user-select:none; transition:transform .12s ease, background .12s ease;
+  }
+  .pill:hover{transform:translateY(-1px);}
+  .pill.activo{background:var(--verde-cancha); color:#fff; border-color:var(--verde-cancha);}
+  .pill.lleno{background:var(--tiza-2); color:var(--carbon-suave); cursor:not-allowed;}
+  .pill.amarillo{background:var(--amarillo); border-color:var(--amarillo); color:var(--carbon);}
+  .pill.rojo{background:var(--rojo); border-color:var(--rojo); color:#fff;}
+  .pillrow{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--verde-cancha); color:#fff; border:none; border-radius:10px;
+    padding:11px 16px; font-weight:700; font-size:14px; cursor:pointer; width:100%;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .btn:hover{background:var(--verde-oscuro);}
+  .btn:active{transform:scale(.98);}
+  .btn.secundario{background:transparent; color:var(--verde-cancha); border:2px solid var(--verde-cancha);}
+  .btn.amarillo{background:var(--amarillo); color:var(--carbon);}
+  .btn.amarillo:hover{background:#E0AC1E;}
+  .btn.chico{width:auto; padding:8px 14px; font-size:13px;}
+  .btn:disabled{background:var(--tiza-2); color:var(--carbon-suave); cursor:not-allowed;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .shortcuts{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;}
+  .shortcuts .sc{
+    background:#fff; border:1px solid var(--tiza-2); border-radius:var(--radius); padding:14px;
+    cursor:pointer; text-align:left;
+  }
+  .shortcuts .sc:hover{border-color:var(--verde-claro);}
+  .shortcuts .sc .ico{font-size:22px;}
+  .shortcuts .sc .lbl{font-weight:700; font-size:13.5px; margin-top:6px; display:block;}
+
+  /* ---------- Forms ---------- */
+  label.lbl{display:block; font-size:13px; font-weight:700; margin:14px 0 6px;}
+  input[type=text], input[type=number], select{
+    width:100%; padding:11px 12px; border:1.5px solid var(--tiza-2); border-radius:10px;
+    font-size:14.5px; font-family:'Inter',sans-serif; background:#fff; color:var(--carbon);
+  }
+  input:focus, select:focus{outline:2px solid var(--verde-claro); border-color:var(--verde-claro);}
+  .likert{display:flex; gap:6px;}
+  .likert button{
+    flex:1; padding:10px 0; border-radius:8px; border:1.5px solid var(--tiza-2); background:#fff;
+    font-family:'Space Mono',monospace; font-weight:700; cursor:pointer; color:var(--carbon-suave);
+  }
+  .likert button.sel{background:var(--verde-cancha); color:#fff; border-color:var(--verde-cancha);}
+  .likert-caption{display:flex; justify-content:space-between; font-size:10.5px; color:var(--carbon-suave); margin-top:3px;}
+  .swatches{display:flex; gap:8px; margin-top:4px;}
+  .swatch{width:34px; height:34px; border-radius:50%; cursor:pointer; border:3px solid transparent;}
+  .swatch.sel{border-color:var(--carbon);}
+
+  /* ---------- FIFA-style card ---------- */
+  .carnet-wrap{display:flex; justify-content:center; margin:6px 0 18px;}
+  .carnet{
+    width:240px; border-radius:18px; padding:18px 16px; position:relative; overflow:hidden;
+    color:var(--carbon); box-shadow:0 10px 24px rgba(19,32,26,0.25);
+  }
+  .carnet.bronce{background:linear-gradient(160deg,var(--bronce-1),var(--bronce-2)); color:#fff;}
+  .carnet.plata{background:linear-gradient(160deg,var(--plata-1),var(--plata-2)); color:var(--carbon);}
+  .carnet.oro{background:linear-gradient(160deg,var(--oro-1),var(--oro-2)); color:var(--carbon);}
+  .carnet.leyenda{background:linear-gradient(160deg,var(--leyenda-1),var(--leyenda-2)); color:#fff;}
+  .carnet .arco{position:absolute; top:-30px; right:-30px; width:90px; height:90px; opacity:.35;}
+  .carnet .top-row{display:flex; justify-content:space-between; align-items:flex-start;}
+  .carnet .ovr-num{font-family:'Anton',sans-serif; font-size:34px; line-height:1;}
+  .carnet .pos-tag{font-family:'Space Mono',monospace; font-weight:700; font-size:13px; margin-top:2px;}
+  .carnet .avatar{
+    width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.35); font-family:'Anton',sans-serif; font-size:22px; margin:8px auto 4px;
+    border:2px solid rgba(255,255,255,0.6);
+  }
+  .carnet .nombre{text-align:center; font-family:'Anton',sans-serif; font-size:17px; letter-spacing:.03em;}
+  .carnet .club{text-align:center; font-size:11px; opacity:.85; margin-top:2px;}
+  .carnet .dorsal{font-family:'Space Mono',monospace; font-size:11px; text-align:center; opacity:.8;}
+  .carnet hr{border:none; border-top:1px solid rgba(255,255,255,0.4); margin:10px 0;}
+  .carnet .stats{display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; font-size:11.5px;}
+  .carnet .stats div{display:flex; justify-content:space-between;}
+  .carnet .stats b{font-family:'Space Mono',monospace;}
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed; bottom:84px; left:50%; transform:translate(-50%,20px);
+    background:var(--carbon); color:#fff; padding:11px 18px; border-radius:30px;
+    font-size:13.5px; font-weight:600; box-shadow:0 6px 18px rgba(0,0,0,.25);
+    opacity:0; transition:opacity .25s ease, transform .25s ease; pointer-events:none; z-index:80;
+    max-width:88%; text-align:center;
+  }
+  #toast.show{opacity:1; transform:translate(-50%,0);}
+
+  /* ---------- Bottom nav ---------- */
+  nav.botbar{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    background:#fff; border-top:1px solid var(--tiza-2);
+    display:flex; max-width:var(--max-w); margin:0 auto;
+    box-shadow:0 -4px 14px rgba(19,32,26,0.06);
+  }
+  nav.botbar button{
+    flex:1; background:none; border:none; padding:9px 2px 8px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--carbon-suave);
+  }
+  nav.botbar button .ic{font-size:19px;}
+  nav.botbar button .tx{font-size:10px; font-weight:700; letter-spacing:.01em;}
+  nav.botbar button.activo{color:var(--verde-cancha);}
+  nav.botbar button.activo .ic{transform:scale(1.08);}
+
+  .vacio{text-align:center; padding:32px 10px; color:var(--carbon-suave);}
+  .vacio .ico{font-size:34px; display:block; margin-bottom:8px;}
+
+  .chip-nivel{
+    font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px;
+    background:var(--tiza-2); color:var(--carbon);
+  }
+  .chip-nivel.recreativo{background:#DFF3E3; color:var(--verde-oscuro);}
+  .chip-nivel.intermedio{background:#FFF0CC; color:#8A5A00;}
+  .chip-nivel.competitivo{background:#FBDADE; color:var(--rojo);}
+
+  .filtro-niveles{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px;}
+  .filtro-niveles .pill{white-space:nowrap;}
+
+  .directorio-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .mini-jugador{background:#fff; border:1px solid var(--tiza-2); border-radius:12px; padding:12px; text-align:center;}
+  .mini-jugador .av{width:46px; height:46px; border-radius:50%; margin:0 auto 6px; display:flex; align-items:center; justify-content:center; font-family:'Anton',sans-serif; font-size:15px; color:#fff;}
+  .mini-jugador .nm{font-weight:700; font-size:13px;}
+  .mini-jugador .ps{font-size:11px; color:var(--carbon-suave); margin-bottom:8px;}
+
+  .reset-link{display:block; text-align:center; font-size:11.5px; color:var(--carbon-suave); margin-top:10px; cursor:pointer; text-decoration:underline;}
+
+  .ladder{display:flex; align-items:center; gap:4px; margin:14px 0 4px; overflow-x:auto;}
+  .ladder .step{flex:1; min-width:64px; text-align:center; font-size:10px; font-weight:700; color:var(--carbon-suave); position:relative; padding-top:14px;}
+  .ladder .step::before{content:''; position:absolute; top:4px; left:50%; transform:translateX(-50%); width:10px; height:10px; border-radius:50%; background:var(--tiza-2);}
+  .ladder .step.ok::before{background:var(--verde-cancha);}
+  .ladder .step.ok{color:var(--verde-cancha);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="display">⚽ POTRE<span>RO</span></span>
+    </div>
+    <div class="ovr-badge" onclick="irA('carnet')" id="ovrBadgeWrap" style="display:none;">
+      <div class="circle" id="ovrBadgeNum">--</div>
+      <span id="ovrBadgeLabel">Tu carnet</span>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- INICIO -->
+    <section class="screen" id="screen-inicio">
+      <div class="eyebrow">Hoy en tu cancha</div>
+      <h1 class="titulo-pantalla" id="saludoInicio">Hola 👋</h1>
+      <p class="subt">Reserva cancha, completa equipo y súbele el nivel a tu juego.</p>
+
+      <div class="card verde" id="cardEstadoPerfil"></div>
+
+      <h3 style="font-size:14px; margin:18px 0 8px; text-transform:uppercase; letter-spacing:.05em; color:var(--carbon-suave);">Partidos que necesitan jugadores</h3>
+      <div id="inicioPartidosDestacados"></div>
+
+      <div class="shortcuts">
+        <button class="sc" onclick="irA('canchas')"><span class="ico">🏟️</span><span class="lbl">Reservar cancha</span></button>
+        <button class="sc" onclick="irA('partidos')"><span class="ico">🤝</span><span class="lbl">Unirme a un partido</span></button>
+        <button class="sc" onclick="irA('comunidad')"><span class="ico">👥</span><span class="lbl">Ver comunidad</span></button>
+        <button class="sc" onclick="irA('torneos')"><span class="ico">🏆</span><span class="lbl">Explorar torneos</span></button>
+      </div>
+
+      <span class="reset-link" onclick="reiniciarDemo()">Reiniciar datos de la demo</span>
+    </section>
+
+    <!-- CANCHAS -->
+    <section class="screen" id="screen-canchas">
+      <div class="eyebrow">Canchas disponibles</div>
+      <h1 class="titulo-pantalla">Reserva tu cancha</h1>
+      <p class="subt">Elige horario y separa tu turno. El cupo se actualiza al instante.</p>
+      <div id="listaCanchas"></div>
+    </section>
+
+    <!-- PARTIDOS -->
+    <section class="screen" id="screen-partidos">
+      <div class="eyebrow">Cupos disponibles</div>
+      <h1 class="titulo-pantalla">Partidos abiertos</h1>
+      <p class="subt">Únete a un equipo que aún necesita jugadores en tu posición.</p>
+      <div id="listaPartidos"></div>
+      <hr class="linea-tiza">
+      <h3 style="font-size:14px; margin-bottom:8px;">¿Te falta gente para tu propio partido?</h3>
+      <div class="card" id="formCrearPartido"></div>
+    </section>
+
+    <!-- CARNET -->
+    <section class="screen" id="screen-carnet">
+      <div class="eyebrow">Tu nivel de juego</div>
+      <h1 class="titulo-pantalla">Mi carnet</h1>
+      <p class="subt">Crea tu tarjeta de jugador: nombre, posición sugerida y nivel.</p>
+      <div id="carnetContenido"></div>
+    </section>
+
+    <!-- COMUNIDAD -->
+    <section class="screen" id="screen-comunidad">
+      <div class="eyebrow">Red de jugadores</div>
+      <h1 class="titulo-pantalla">Comunidad</h1>
+      <p class="subt">Agrega a quienes conozcas en la cancha para cuadrar el próximo partido.</p>
+      <h3 style="font-size:14px; margin-bottom:8px;">Mis amigos</h3>
+      <div id="listaAmigos"></div>
+      <hr class="linea-tiza">
+      <h3 style="font-size:14px; margin-bottom:8px;">Jugadores cerca de ti</h3>
+      <div class="directorio-grid" id="listaDirectorio"></div>
+    </section>
+
+    <!-- TORNEOS -->
+    <section class="screen" id="screen-torneos">
+      <div class="eyebrow">Sube de nivel</div>
+      <h1 class="titulo-pantalla">Torneos</h1>
+      <p class="subt">Desde el barrio hasta la selección nacional amateur.</p>
+      <div class="ladder" id="ladderGlobal"></div>
+      <div class="filtro-niveles" id="filtroNivelesTorneo"></div>
+      <div id="listaTorneos"></div>
+    </section>
+
+  </main>
+
+  <nav class="botbar">
+    <button data-screen="inicio" onclick="irA('inicio')"><span class="ic">🏠</span><span class="tx">Inicio</span></button>
+    <button data-screen="canchas" onclick="irA('canchas')"><span class="ic">🏟️</span><span class="tx">Canchas</span></button>
+    <button data-screen="partidos" onclick="irA('partidos')"><span class="ic">⚽</span><span class="tx">Partidos</span></button>
+    <button data-screen="carnet" onclick="irA('carnet')"><span class="ic">🪪</span><span class="tx">Carnet</span></button>
+    <button data-screen="comunidad" onclick="irA('comunidad')"><span class="ic">👥</span><span class="tx">Comunidad</span></button>
+    <button data-screen="torneos" onclick="irA('torneos')"><span class="ic">🏆</span><span class="tx">Torneos</span></button>
+  </nav>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   POTRERO — lógica de la aplicación
+   ============================================================ */
+
+const KEYS = {
+  CANCHAS: 'potrero:canchas',
+  PARTIDOS: 'potrero:partidos',
+  TORNEOS: 'potrero:torneos',
+  DIRECTORIO: 'potrero:directorio',
+  PERFIL: 'perfil:mio',
+  AMIGOS: 'amigos:mios',
+  MIS_TORNEOS: 'mis_torneos:mios'
+};
+
+let state = {
+  canchas: [], partidos: [], torneos: [], directorio: [],
+  perfil: null, amigos: [], misTorneos: []
+};
+
+/* ---------------- almacenamiento ---------------- */
+function hasStorage(){ return typeof window.storage !== 'undefined' && window.storage; }
+
+async function storeGet(key, shared){
+  if(!hasStorage()) return null;
+  try{
+    const r = await window.storage.get(key, shared);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){ return null; }
+}
+async function storeSet(key, value, shared){
+  if(!hasStorage()) return false;
+  try{
+    const r = await window.storage.set(key, JSON.stringify(value), shared);
+    return !!r;
+  }catch(e){ console.error('storage set error', e); return false; }
+}
+
+/* ---------------- datos semilla ---------------- */
+function semillaCanchas(){
+  return [
+    {id:'c1', nombre:'Cancha El Bosque', barrio:'Suba', formato:'5v5 sintética', precio:110000,
+      horarios:[{hora:'6:00 pm', cupos:10, ocupados:6},{hora:'7:00 pm', cupos:10, ocupados:10},{hora:'8:00 pm', cupos:10, ocupados:3}]},
+    {id:'c2', nombre:'Polideportivo Chapinero', barrio:'Chapinero', formato:'8v8 sintética', precio:150000,
+      horarios:[{hora:'5:00 pm', cupos:16, ocupados:9},{hora:'6:30 pm', cupos:16, ocupados:16},{hora:'8:00 pm', cupos:16, ocupados:4}]},
+    {id:'c3', nombre:'Potrero Kennedy Central', barrio:'Kennedy', formato:'5v5 sintética', precio:90000,
+      horarios:[{hora:'6:00 pm', cupos:10, ocupados:2},{hora:'7:00 pm', cupos:10, ocupados:8}]},
+    {id:'c4', nombre:'Club Engativá', barrio:'Engativá', formato:'6v6 sintética', precio:100000,
+      horarios:[{hora:'5:30 pm', cupos:12, ocupados:5},{hora:'7:00 pm', cupos:12, ocupados:12},{hora:'9:00 pm', cupos:12, ocupados:1}]},
+    {id:'c5', nombre:'Cancha Usaquén Norte', barrio:'Usaquén', formato:'5v5 sintética', precio:130000,
+      horarios:[{hora:'6:00 pm', cupos:10, ocupados:4},{hora:'8:00 pm', cupos:10, ocupados:9}]},
+    {id:'c6', nombre:'Teusaquillo Fútbol Club', barrio:'Teusaquillo', formato:'11v11 grama', precio:280000,
+      horarios:[{hora:'4:00 pm', cupos:22, ocupados:11},{hora:'6:00 pm', cupos:22, ocupados:18}]}
+  ];
+}
+function semillaPartidos(){
+  return [
+    {id:'p1', cancha:'Cancha El Bosque', barrio:'Suba', fecha:'Jue 18 jun', hora:'7:00 pm', formato:'5v5', nivel:'Intermedio', precioPorPersona:11000,
+      necesita:{Portero:1,Defensa:1,Mediocampista:0,Delantero:1}, jugadores:[
+        {nombre:'Sebastián R.', pos:'Defensa'},{nombre:'Andrés P.', pos:'Mediocampista'},{nombre:'Laura G.', pos:'Mediocampista'},
+        {nombre:'Camilo T.', pos:'Defensa'},{nombre:'Felipe N.', pos:'Mediocampista'}]},
+    {id:'p2', cancha:'Potrero Kennedy Central', barrio:'Kennedy', fecha:'Vie 19 jun', hora:'6:00 pm', formato:'5v5', nivel:'Recreativo', precioPorPersona:9000,
+      necesita:{Portero:0,Defensa:2,Mediocampista:1,Delantero:0}, jugadores:[
+        {nombre:'Mariana V.', pos:'Portero'},{nombre:'Julián M.', pos:'Delantero'},{nombre:'Daniel C.', pos:'Delantero'}]},
+    {id:'p3', cancha:'Club Engativá', barrio:'Engativá', fecha:'Sáb 20 jun', hora:'9:00 pm', formato:'6v6', nivel:'Competitivo', precioPorPersona:13000,
+      necesita:{Portero:1,Defensa:0,Mediocampista:1,Delantero:1}, jugadores:[
+        {nombre:'Nicolás A.', pos:'Defensa'},{nombre:'Esteban L.', pos:'Defensa'},{nombre:'Valentina S.', pos:'Mediocampista'}]},
+    {id:'p4', cancha:'Cancha Usaquén Norte', barrio:'Usaquén', fecha:'Dom 21 jun', hora:'6:00 pm', formato:'5v5', nivel:'Intermedio', precioPorPersona:14000,
+      necesita:{Portero:0,Defensa:1,Mediocampista:0,Delantero:0}, jugadores:[
+        {nombre:'Tomás E.', pos:'Portero'},{nombre:'Santiago F.', pos:'Defensa'},{nombre:'David H.', pos:'Mediocampista'},
+        {nombre:'Catalina W.', pos:'Mediocampista'},{nombre:'Juan D.', pos:'Delantero'}]}
+  ];
+}
+function semillaTorneos(){
+  return [
+    {id:'t1', nombre:'Copa Barrio Suba', nivel:'Barrial', formato:'5v5', cupoEquipos:16, inscritos:9, fecha:'29 jun', premio:'Trofeo + balones'},
+    {id:'t2', nombre:'Liga Zonal Engativá', nivel:'Zonal', formato:'6v6', cupoEquipos:12, inscritos:5, fecha:'12 jul', premio:'$800.000 + trofeo'},
+    {id:'t3', nombre:'Copa Bogotá Amateur', nivel:'Municipal', formato:'8v8', cupoEquipos:24, inscritos:20, fecha:'2 ago', premio:'$3.000.000'},
+    {id:'t4', nombre:'Torneo Cundinamarca', nivel:'Departamental', formato:'11v11', cupoEquipos:18, inscritos:11, fecha:'14 sep', premio:'Cupo a nacional'},
+    {id:'t5', nombre:'Copa Nacional Amateur Potrero', nivel:'Nacional', formato:'11v11', cupoEquipos:32, inscritos:14, fecha:'8 nov', premio:'$15.000.000 + selección'}
+  ];
+}
+function semillaDirectorio(){
+  return [
+    {id:'d1', nombre:'Mariana Vélez', pos:'Portero', ovr:78, barrio:'Kennedy', color:'#1B6E3C'},
+    {id:'d2', nombre:'Andrés Pardo', pos:'Mediocampista', ovr:81, barrio:'Suba', color:'#C8102E'},
+    {id:'d3', nombre:'Laura Gómez', pos:'Delantero', ovr:85, barrio:'Chapinero', color:'#FFC72C'},
+    {id:'d4', nombre:'Camilo Torres', pos:'Defensa', ovr:73, barrio:'Engativá', color:'#0EC6C6'},
+    {id:'d5', nombre:'Valentina Suárez', pos:'Mediocampista', ovr:88, barrio:'Usaquén', color:'#7B2FF7'},
+    {id:'d6', nombre:'Nicolás Arias', pos:'Defensa', ovr:69, barrio:'Teusaquillo', color:'#1B6E3C'},
+    {id:'d7', nombre:'Sebastián Ruiz', pos:'Delantero', ovr:91, barrio:'Fontibón', color:'#C8102E'},
+    {id:'d8', nombre:'Daniela Castro', pos:'Portero', ovr:75, barrio:'Suba', color:'#0EC6C6'}
+  ];
+}
+
+/* ---------------- carga inicial ---------------- */
+async function cargarTodo(){
+  const [canchas, partidos, torneos, directorio, perfil, amigos, misTorneos] = await Promise.all([
+    storeGet(KEYS.CANCHAS, true), storeGet(KEYS.PARTIDOS, true), storeGet(KEYS.TORNEOS, true),
+    storeGet(KEYS.DIRECTORIO, true), storeGet(KEYS.PERFIL, false), storeGet(KEYS.AMIGOS, false),
+    storeGet(KEYS.MIS_TORNEOS, false)
+  ]);
+  state.canchas = canchas || semillaCanchas();
+  state.partidos = partidos || semillaPartidos();
+  state.torneos = torneos || semillaTorneos();
+  state.directorio = directorio || semillaDirectorio();
+  state.perfil = perfil || null;
+  state.amigos = amigos || [];
+  state.misTorneos = misTorneos || [];
+
+  if(!canchas) storeSet(KEYS.CANCHAS, state.canchas, true);
+  if(!partidos) storeSet(KEYS.PARTIDOS, state.partidos, true);
+  if(!torneos) storeSet(KEYS.TORNEOS, state.torneos, true);
+  if(!directorio) storeSet(KEYS.DIRECTORIO, state.directorio, true);
+}
+
+/* ---------------- navegación ---------------- */
+function irA(pantalla){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('activo'));
+  document.getElementById('screen-'+pantalla).classList.add('activo');
+  document.querySelectorAll('nav.botbar button').forEach(b=>b.classList.toggle('activo', b.dataset.screen===pantalla));
+  renderPantalla(pantalla);
+  window.scrollTo(0,0);
+}
+function renderPantalla(p){
+  if(p==='inicio') renderInicio();
+  if(p==='canchas') renderCanchas();
+  if(p==='partidos') renderPartidos();
+  if(p==='carnet') renderCarnet();
+  if(p==='comunidad') renderComunidad();
+  if(p==='torneos') renderTorneos();
+  renderOvrBadge();
+}
+
+/* ---------------- toast ---------------- */
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------------- badge OVR superior ---------------- */
+function renderOvrBadge(){
+  const wrap=document.getElementById('ovrBadgeWrap');
+  if(state.perfil){
+    wrap.style.display='flex';
+    document.getElementById('ovrBadgeNum').textContent=state.perfil.ovr;
+    document.getElementById('ovrBadgeLabel').textContent=state.perfil.nombre.split(' ')[0];
+  } else {
+    wrap.style.display='none';
+  }
+}
+
+/* ================= INICIO ================= */
+function renderInicio(){
+  document.getElementById('saludoInicio').textContent = state.perfil ? `Hola, ${state.perfil.nombre.split(' ')[0]} 👋` : 'Hola 👋';
+
+  const cardEstado = document.getElementById('cardEstadoPerfil');
+  if(state.perfil){
+    cardEstado.innerHTML = `
+      <div class="card-row">
+        <div>
+          <div style="font-size:12px; opacity:.85;">Tu nivel actual</div>
+          <h3 style="margin-top:4px;">${state.perfil.posicion} · ${state.perfil.ovr} OVR</h3>
+          <div style="font-size:12.5px; opacity:.9; margin-top:4px;">${state.amigos.length} amigos en tu red</div>
+        </div>
+        <div class="ovr-num" style="font-family:'Anton',sans-serif; font-size:30px;">${state.perfil.ovr}</div>
+      </div>`;
+  } else {
+    cardEstado.innerHTML = `
+      <h3>Aún no tienes carnet de jugador</h3>
+      <p style="font-size:13px; opacity:.9; margin:6px 0 10px;">Crea tu tarjeta en 1 minuto: nombre, test rápido y listo.</p>
+      <button class="btn amarillo" onclick="irA('carnet')">Crear mi carnet ⚽</button>`;
+  }
+
+  const destacados = document.getElementById('inicioPartidosDestacados');
+  const abiertos = state.partidos.filter(p=>totalNecesita(p)>0).slice(0,2);
+  if(abiertos.length===0){
+    destacados.innerHTML = `<div class="vacio"><span class="ico">🥅</span>No hay partidos abiertos en este momento.</div>`;
+  } else {
+    destacados.innerHTML = abiertos.map(p=>tarjetaPartido(p, true)).join('');
+  }
+}
+
+/* ================= CANCHAS ================= */
+function renderCanchas(){
+  const cont = document.getElementById('listaCanchas');
+  cont.innerHTML = state.canchas.map(c=>{
+    const horarios = c.horarios.map(h=>{
+      const lleno = h.ocupados>=h.cupos;
+      const libres = h.cupos-h.ocupados;
+      return `<button class="pill ${lleno?'lleno':''}" ${lleno?'disabled':''} onclick="reservarCancha('${c.id}','${h.hora}')">
+        🕒 ${h.hora} · ${lleno?'Lleno':libres+' cupos'}
+      </button>`;
+    }).join('');
+    return `
+      <div class="card">
+        <div class="card-row">
+          <div>
+            <h3>${c.nombre}</h3>
+            <div class="meta"><span>📍 ${c.barrio}</span><span>🥅 ${c.formato}</span></div>
+          </div>
+          <div style="text-align:right;">
+            <div class="price" style="font-weight:700;">$${formatoPesos(c.precio)}</div>
+            <div style="font-size:11px; color:var(--carbon-suave);">por hora</div>
+          </div>
+        </div>
+        <div class="pillrow">${horarios}</div>
+      </div>`;
+  }).join('');
+}
+function reservarCancha(canchaId, hora){
+  const cancha = state.canchas.find(c=>c.id===canchaId);
+  const horario = cancha.horarios.find(h=>h.hora===hora);
+  if(horario.ocupados>=horario.cupos){ showToast('Ese horario ya está lleno'); return; }
+  horario.ocupados++;
+  storeSet(KEYS.CANCHAS, state.canchas, true);
+  renderCanchas();
+  showToast(`Reservaste ${cancha.nombre} · ${hora}`);
+}
+
+/* ================= PARTIDOS ================= */
+function totalNecesita(p){ return Object.values(p.necesita).reduce((a,b)=>a+b,0); }
+function tarjetaPartido(p, compacto){
+  const necesitaPills = Object.entries(p.necesita).filter(([,n])=>n>0).map(([pos,n])=>
+    `<button class="pill" onclick="unirsePartido('${p.id}','${pos}')">+ ${pos} (${n})</button>`
+  ).join('');
+  const completo = totalNecesita(p)===0;
+  return `
+    <div class="card">
+      <div class="card-row">
+        <div>
+          <h3>${p.cancha}</h3>
+          <div class="meta"><span>📍 ${p.barrio}</span><span>📅 ${p.fecha}, ${p.hora}</span><span>🥅 ${p.formato}</span></div>
+        </div>
+        <span class="chip-nivel ${p.nivel.toLowerCase()}">${p.nivel}</span>
+      </div>
+      <div class="meta" style="margin-top:8px;"><span>👥 ${p.jugadores.length} inscritos</span><span>💰 $${formatoPesos(p.precioPorPersona)} / persona</span></div>
+      ${completo ? `<div class="pillrow"><span class="pill activo">✅ Equipo completo</span></div>` : `<div class="pillrow">${necesitaPills}</div>`}
+    </div>`;
+}
+function renderPartidos(){
+  document.getElementById('listaPartidos').innerHTML = state.partidos.length
+    ? state.partidos.map(p=>tarjetaPartido(p,false)).join('')
+    : `<div class="vacio"><span class="ico">⚽</span>No hay partidos creados todavía.</div>`;
+  renderFormCrearPartido();
+}
+function unirsePartido(partidoId, posicion){
+  if(!state.perfil){ showToast('Crea tu carnet antes de unirte a un partido'); irA('carnet'); return; }
+  const p = state.partidos.find(x=>x.id===partidoId);
+  if(p.necesita[posicion]<=0){ showToast('Ese cupo ya se llenó'); renderPartidos(); return; }
+  p.necesita[posicion]--;
+  p.jugadores.push({nombre:state.perfil.nombre, pos:posicion});
+  storeSet(KEYS.PARTIDOS, state.partidos, true);
+  renderPantalla(document.querySelector('.screen.activo').id.replace('screen-',''));
+  showToast(`Te uniste como ${posicion} en ${p.cancha}`);
+}
+function renderFormCrearPartido(){
+  const cont = document.getElementById('formCrearPartido');
+  cont.innerHTML = `
+    <label class="lbl">Cancha</label>
+    <select id="npCancha">${state.canchas.map(c=>`<option value="${c.nombre}|${c.barrio}">${c.nombre} — ${c.barrio}</option>`).join('')}</select>
+    <label class="lbl">Día y hora</label>
+    <input type="text" id="npFechaHora" placeholder="Ej: Mié 24 jun, 7:00 pm">
+    <label class="lbl">Formato</label>
+    <select id="npFormato"><option>5v5</option><option>6v6</option><option>8v8</option><option>11v11</option></select>
+    <label class="lbl">¿Cuántos jugadores te faltan y en qué posición?</label>
+    <div class="grid2" style="margin-top:6px;">
+      <div><label style="font-size:12px;">Porteros</label><input type="number" id="npPor" min="0" value="0"></div>
+      <div><label style="font-size:12px;">Defensas</label><input type="number" id="npDef" min="0" value="1"></div>
+      <div><label style="font-size:12px;">Mediocampistas</label><input type="number" id="npMed" min="0" value="1"></div>
+      <div><label style="font-size:12px;">Delanteros</label><input type="number" id="npDel" min="0" value="0"></div>
+    </div>
+    <button class="btn" style="margin-top:14px;" onclick="crearPartido()">Publicar partido</button>`;
+}
+function crearPartido(){
+  const cancha = document.getElementById('npCancha').value.split('|');
+  const fechaHora = document.getElementById('npFechaHora').value.trim();
+  if(!fechaHora){ showToast('Escribe el día y la hora'); return; }
+  const necesita = {
+    Portero:+document.getElementById('npPor').value,
+    Defensa:+document.getElementById('npDef').value,
+    Mediocampista:+document.getElementById('npMed').value,
+    Delantero:+document.getElementById('npDel').value
+  };
+  const [hora] = [fechaHora.split(',').pop().trim()];
+  const nuevo = {
+    id:'p'+Date.now(), cancha:cancha[0], barrio:cancha[1], fecha:fechaHora.split(',')[0]||fechaHora, hora:hora,
+    formato:document.getElementById('npFormato').value, nivel:'Recreativo', precioPorPersona:10000,
+    necesita, jugadores: state.perfil ? [{nombre:state.perfil.nombre, pos:'Organizador'}] : []
+  };
+  state.partidos.unshift(nuevo);
+  storeSet(KEYS.PARTIDOS, state.partidos, true);
+  renderPartidos();
+  showToast('Tu partido quedó publicado 🎉');
+}
+
+/* ================= CARNET (FIFA-style) ================= */
+const PREGUNTAS = [
+  {id:'ritmo', txt:'¿Qué tan rápido eres en la cancha?', ini:'Lento', fin:'Muy rápido'},
+  {id:'tiro', txt:'¿Qué tan fuerte/preciso es tu remate?', ini:'Flojo', fin:'Letal'},
+  {id:'pase', txt:'¿Qué tan bien repartes el balón?', ini:'Básico', fin:'Visión total'},
+  {id:'regate', txt:'¿Qué tan bien driblas rivales?', ini:'Casi nada', fin:'Inatajable'},
+  {id:'defensa', txt:'¿Qué tan bien marcas y recuperas balones?', ini:'Poco', fin:'Muralla'},
+  {id:'fisico', txt:'¿Cómo aguantas los 90 minutos?', ini:'Me canso', fin:'No paro'},
+  {id:'portero', txt:'¿Qué tan cómodo te sientes atajando bajo los tres palos?', ini:'Nada', fin:'Arquero nato'}
+];
+function renderCarnet(){
+  const cont = document.getElementById('carnetContenido');
+  if(state.perfil){
+    cont.innerHTML = renderTarjetaCarnet(state.perfil) + `
+      <div style="display:flex; gap:10px; margin-top:6px;">
+        <button class="btn secundario" onclick="rehacerTest()">Repetir test</button>
+        <button class="btn" onclick="irA('partidos')">Buscar partido</button>
+      </div>`;
+    return;
+  }
+  cont.innerHTML = `
+    <label class="lbl">Tu nombre</label>
+    <input type="text" id="cfNombre" placeholder="Ej: Diego Ramírez">
+    <div class="grid2">
+      <div><label class="lbl">Número de camiseta</label><input type="number" id="cfNumero" min="1" max="99" value="10"></div>
+      <div><label class="lbl">Barrio / equipo</label><input type="text" id="cfClub" placeholder="Ej: Potrero Suba FC"></div>
+    </div>
+    <label class="lbl">Color de tu camiseta</label>
+    <div class="swatches" id="swatches"></div>
+
+    <hr class="linea-tiza">
+    <h3 style="font-size:15px; margin-bottom:4px;">Test rápido de nivel</h3>
+    <p style="font-size:12.5px; color:var(--carbon-suave); margin:0 0 6px;">Responde del 1 al 5. Con esto calculamos tu posición sugerida y tus estadísticas.</p>
+    <div id="preguntasWrap"></div>
+
+    <label class="lbl">¿Ya sabes en qué posición juegas normalmente?</label>
+    <select id="cfPosPref">
+      <option value="">No estoy seguro / que el test decida</option>
+      <option value="Portero">Portero</option>
+      <option value="Defensa">Defensa</option>
+      <option value="Mediocampista">Mediocampista</option>
+      <option value="Delantero">Delantero</option>
+    </select>
+
+    <button class="btn amarillo" style="margin-top:18px;" onclick="generarCarnet()">Generar mi carnet ⚽</button>`;
+
+  const colores = ['#1B6E3C','#C8102E','#FFC72C','#0EC6C6','#7B2FF7','#14201A'];
+  document.getElementById('swatches').innerHTML = colores.map((c,i)=>
+    `<div class="swatch ${i===0?'sel':''}" style="background:${c};" data-color="${c}" onclick="elegirColor(this)"></div>`).join('');
+
+  document.getElementById('preguntasWrap').innerHTML = PREGUNTAS.map(q=>`
+    <label class="lbl">${q.txt}</label>
+    <div class="likert" data-pregunta="${q.id}">
+      ${[1,2,3,4,5].map(v=>`<button type="button" onclick="elegirLikert(this,'${q.id}',${v})">${v}</button>`).join('')}
+    </div>
+    <div class="likert-caption"><span>${q.ini}</span><span>${q.fin}</span></div>
+  `).join('');
+}
+let respuestasTest = {};
+let colorElegido = '#1B6E3C';
+function elegirColor(el){
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  colorElegido = el.dataset.color;
+}
+function elegirLikert(btn, preguntaId, valor){
+  const grupo = btn.closest('.likert');
+  grupo.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  respuestasTest[preguntaId] = valor;
+}
+function escalaStat(v){ return Math.round(40 + v*12); } // 1->52 ... 5->100
+
+function generarCarnet(){
+  const nombre = document.getElementById('cfNombre').value.trim();
+  if(!nombre){ showToast('Escribe tu nombre'); return; }
+  const faltan = PREGUNTAS.filter(q=>!respuestasTest[q.id]);
+  if(faltan.length){ showToast('Responde todas las preguntas del test'); return; }
+
+  const stats = {
+    ritmo: escalaStat(respuestasTest.ritmo),
+    tiro: escalaStat(respuestasTest.tiro),
+    pase: escalaStat(respuestasTest.pase),
+    regate: escalaStat(respuestasTest.regate),
+    defensa: escalaStat(respuestasTest.defensa),
+    fisico: escalaStat(respuestasTest.fisico)
+  };
+  const portero = escalaStat(respuestasTest.portero);
+
+  const prefSel = document.getElementById('cfPosPref').value;
+  let posicion;
+  if(prefSel){
+    posicion = prefSel;
+  } else if(portero >= Math.max(stats.defensa, stats.pase, stats.tiro, stats.regate) + 6){
+    posicion = 'Portero';
+  } else {
+    const ataque = (stats.tiro + stats.regate)/2;
+    const cand = [{p:'Defensa', v:stats.defensa},{p:'Mediocampista', v:stats.pase},{p:'Delantero', v:ataque}];
+    cand.sort((a,b)=>b.v-a.v);
+    posicion = cand[0].p;
+  }
+
+  const ovr = posicion==='Portero'
+    ? Math.round((portero + stats.defensa + stats.fisico + stats.pase)/4)
+    : Math.round((stats.ritmo+stats.tiro+stats.pase+stats.regate+stats.defensa+stats.fisico)/6);
+
+  state.perfil = {
+    nombre, numero: +document.getElementById('cfNumero').value || 10,
+    club: document.getElementById('cfClub').value.trim() || 'Jugador libre',
+    color: colorElegido, posicion, ovr, stats, portero
+  };
+  storeSet(KEYS.PERFIL, state.perfil, false);
+  renderCarnet();
+  renderOvrBadge();
+  showToast('¡Tu carnet quedó listo! 🪪');
+}
+function rehacerTest(){
+  respuestasTest = {};
+  state.perfil = null;
+  storeSet(KEYS.PERFIL, null, false);
+  renderCarnet();
+  renderOvrBadge();
+}
+function tierCarnet(ovr){
+  if(ovr>=85) return 'leyenda';
+  if(ovr>=75) return 'oro';
+  if(ovr>=65) return 'plata';
+  return 'bronce';
+}
+function renderTarjetaCarnet(perf){
+  const tier = tierCarnet(perf.ovr);
+  const iniciales = perf.nombre.split(' ').slice(0,2).map(s=>s[0]).join('').toUpperCase();
+  const posAbbr = {Portero:'POR',Defensa:'DEF',Mediocampista:'MED',Delantero:'DEL'}[perf.posicion] || perf.posicion.slice(0,3).toUpperCase();
+  const filas = perf.posicion==='Portero'
+    ? [['ATJ',perf.portero],['DEF',perf.stats.defensa],['FIS',perf.stats.fisico],['PAS',perf.stats.pase]]
+    : [['RIT',perf.stats.ritmo],['TIR',perf.stats.tiro],['PAS',perf.stats.pase],['REG',perf.stats.regate],['DEF',perf.stats.defensa],['FIS',perf.stats.fisico]];
+  return `
+    <div class="carnet-wrap">
+      <div class="carnet ${tier}">
+        <svg class="arco" viewBox="0 0 100 100"><path d="M100,0 A100,100 0 0,1 0,100" fill="none" stroke="currentColor" stroke-width="3"/></svg>
+        <div class="top-row">
+          <div>
+            <div class="ovr-num">${perf.ovr}</div>
+            <div class="pos-tag">${posAbbr}</div>
+          </div>
+          <div class="dorsal">#${perf.numero}</div>
+        </div>
+        <div class="avatar" style="background:${perf.color};">${iniciales}</div>
+        <div class="nombre">${perf.nombre}</div>
+        <div class="club">${perf.club}</div>
+        <hr>
+        <div class="stats">${filas.map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+      </div>
+    </div>`;
+}
+
+/* ================= COMUNIDAD ================= */
+function renderComunidad(){
+  document.getElementById('listaAmigos').innerHTML = state.amigos.length
+    ? state.amigos.map(a=>tarjetaMiniJugador(a, true)).join('')
+    : `<div class="vacio"><span class="ico">🤝</span>Aún no tienes amigos agregados. Súmalos desde la comunidad.</div>`;
+  document.getElementById('listaDirectorio').innerHTML = state.directorio.map(d=>tarjetaMiniJugador(d, false)).join('');
+}
+function tarjetaMiniJugador(j, esAmigo){
+  const esAmigoYa = state.amigos.some(a=>a.id===j.id);
+  return `
+    <div class="mini-jugador">
+      <div class="av" style="background:${j.color};">${j.nombre.split(' ').slice(0,2).map(s=>s[0]).join('')}</div>
+      <div class="nm">${j.nombre}</div>
+      <div class="ps">${j.pos} · ${j.ovr} OVR · ${j.barrio}</div>
+      ${esAmigo
+        ? `<button class="btn secundario chico" style="width:100%;" onclick="quitarAmigo('${j.id}')">Quitar</button>`
+        : `<button class="btn ${esAmigoYa?'secundario':''} chico" style="width:100%;" ${esAmigoYa?'disabled':''} onclick="agregarAmigo('${j.id}')">${esAmigoYa?'✓ En tu red':'+ Agregar'}</button>`}
+    </div>`;
+}
+function agregarAmigo(id){
+  const j = state.directorio.find(d=>d.id===id);
+  if(state.amigos.some(a=>a.id===id)) return;
+  state.amigos.push(j);
+  storeSet(KEYS.AMIGOS, state.amigos, false);
+  renderComunidad();
+  showToast(`${j.nombre} ahora hace parte de tu red`);
+}
+function quitarAmigo(id){
+  state.amigos = state.amigos.filter(a=>a.id!==id);
+  storeSet(KEYS.AMIGOS, state.amigos, false);
+  renderComunidad();
+}
+
+/* ================= TORNEOS ================= */
+const NIVELES_TORNEO = ['Barrial','Zonal','Municipal','Departamental','Nacional'];
+let filtroNivelActivo = 'Todos';
+function renderTorneos(){
+  document.getElementById('ladderGlobal').innerHTML = NIVELES_TORNEO.map(n=>{
+    const alcanzado = state.misTorneos.some(t=>NIVELES_TORNEO.indexOf(t.nivel)<=NIVELES_TORNEO.indexOf(n));
+    return `<div class="step ${alcanzado?'ok':''}">${n}</div>`;
+  }).join('');
+
+  document.getElementById('filtroNivelesTorneo').innerHTML =
+    ['Todos',...NIVELES_TORNEO].map(n=>`<span class="pill ${filtroNivelActivo===n?'activo':''}" onclick="filtrarNivelTorneo('${n}')">${n}</span>`).join('');
+
+  const lista = filtroNivelActivo==='Todos' ? state.torneos : state.torneos.filter(t=>t.nivel===filtroNivelActivo);
+  document.getElementById('listaTorneos').innerHTML = lista.map(t=>{
+    const inscrito = state.misTorneos.some(mt=>mt.id===t.id);
+    const lleno = t.inscritos>=t.cupoEquipos;
+    return `
+      <div class="card">
+        <div class="card-row">
+          <div>
+            <h3>${t.nombre}</h3>
+            <div class="meta"><span>🥅 ${t.formato}</span><span>📅 ${t.fecha}</span><span>🏅 ${t.premio}</span></div>
+          </div>
+          <span class="chip-nivel">${t.nivel}</span>
+        </div>
+        <div class="meta" style="margin-top:8px;"><span>👥 ${t.inscritos}/${t.cupoEquipos} equipos</span></div>
+        ${inscrito
+          ? `<div class="pillrow"><span class="pill activo">✅ Tu equipo está inscrito</span></div>`
+          : `<button class="btn ${lleno?'':'amarillo'}" style="margin-top:10px;" ${lleno?'disabled':''} onclick="inscribirTorneo('${t.id}')">${lleno?'Cupos llenos':'Inscribir mi equipo'}</button>`}
+      </div>`;
+  }).join('');
+}
+function filtrarNivelTorneo(n){ filtroNivelActivo=n; renderTorneos(); }
+function inscribirTorneo(id){
+  const t = state.torneos.find(x=>x.id===id);
+  if(t.inscritos>=t.cupoEquipos){ showToast('Ya no hay cupos'); return; }
+  t.inscritos++;
+  state.misTorneos.push({id:t.id, nivel:t.nivel});
+  storeSet(KEYS.TORNEOS, state.torneos, true);
+  storeSet(KEYS.MIS_TORNEOS, state.misTorneos, false);
+  renderTorneos();
+  showToast(`Inscribiste tu equipo en ${t.nombre}`);
+}
+
+/* ---------------- utilidades ---------------- */
+function formatoPesos(n){ return n.toLocaleString('es-CO'); }
+
+async function reiniciarDemo(){
+  if(!confirm('Esto borra tu carnet, amigos e inscripciones de esta demo. ¿Continuar?')) return;
+  state.perfil=null; state.amigos=[]; state.misTorneos=[];
+  state.canchas = semillaCanchas(); state.partidos = semillaPartidos(); state.torneos = semillaTorneos();
+  await Promise.all([
+    storeSet(KEYS.PERFIL,null,false), storeSet(KEYS.AMIGOS,[],false), storeSet(KEYS.MIS_TORNEOS,[],false),
+    storeSet(KEYS.CANCHAS,state.canchas,true), storeSet(KEYS.PARTIDOS,state.partidos,true), storeSet(KEYS.TORNEOS,state.torneos,true)
+  ]);
+  renderOvrBadge();
+  irA('inicio');
+  showToast('Datos de la demo reiniciados');
+}
+
+/* ---------------- arranque ---------------- */
+(async function init(){
+  await cargarTodo();
+  irA('inicio');
+})();
+</script>
+</body>
+</html>
